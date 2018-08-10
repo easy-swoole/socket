@@ -17,7 +17,9 @@ class Udp
 
     function __construct($serSock,$address,$port)
     {
-
+        $this->server_socket = $serSock;
+        $this->address = $address;
+        $this->port = $port;
     }
 
     /**

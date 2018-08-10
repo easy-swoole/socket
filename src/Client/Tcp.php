@@ -14,7 +14,7 @@ class Tcp
     protected $reactorId;
     protected $fd;
 
-    final function __construct($fd = null,$reactorId = null)
+    function __construct($fd = null,$reactorId = null)
     {
         $this->fd = $fd;
         $this->reactorId = $reactorId;

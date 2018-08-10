@@ -9,40 +9,22 @@
 namespace EasySwoole\Socket;
 
 
-use EasySwoole\Component\Invoker;
-use EasySwoole\Socket\AbstractInterface\ParserInterface;
+use EasySwoole\Socket\Bean\Caller;
+use EasySwoole\Socket\Bean\Response;
 use EasySwoole\Socket\Client\Tcp;
 use EasySwoole\Socket\Client\Udp;
 use EasySwoole\Socket\Client\WebSocket;
-use EasySwoole\Spl\SplStream;
 use EasySwoole\Trigger\Trigger;
 
 class Dispatcher
 {
-    const TCP = 1;
-    const WEB_SOCK = 2;
-    const UDP = 3;
+    private $config;
 
-    private $exceptionHandler = null;
-    private $parserClass = null;
-
-    function setExceptionHandler(callable $handler)
+    function __construct(Config $config)
     {
-        $this->exceptionHandler = $handler;
-    }
-
-    function __construct(string $parserInterface)
-    {
-        try{
-            $ref = new \ReflectionClass($parserInterface);
-            if($ref->implementsInterface(ParserInterface::class)){
-                $this->parserClass = $parserInterface;
-            }else{
-                throw new \Exception("class {$parserInterface} not a implement ".'EasySwoole\Core\Socket\AbstractInterface\ParserInterface');
-            }
-        }catch (\Throwable $throwable){
-            //此处不做异常拦截
-            throw $throwable;
+        $this->config = $config;
+        if($config->getParser() == null){
+            throw new \Exception('Package parser is required');
         }
     }
 
@@ -52,52 +34,72 @@ class Dispatcher
      *  Web Socket swoole_websocket_frame $frame
      *  Udp array $client_info;
      */
-    function dispatch(\swoole_server $server,$type ,string $data, ...$args):void
+    function dispatch(\swoole_server $server ,string $data, ...$args):void
     {
+        $clientIp = null;
+        $type = $this->config->getType();
         switch ($type){
-            case self::TCP:{
+            case Config::TCP:{
                 $client = new Tcp( ...$args);
+                $clientIp = $server->getClientInfo($client->getFd())['remote_ip'];
                 break;
             }
-            case self::WEB_SOCK:{
+            case Config::WEB_SOCKET:{
                 $client = new WebSocket( ...$args);
+                $clientIp = $server->getClientInfo($client->getFd())['remote_ip'];
                 break;
             }
-            case self::UDP:{
+            case Config::UDP:{
                 $client = new Udp( ...$args);
+                $clientIp = $client->getAddress();
                 break;
             }
             default:{
                 throw new \Exception('dispatcher type error : '.$type);
             }
         }
-        $command = null;
+        if($this->config->getIpWhiteList() && (!$this->config->getIpWhiteList()->check($clientIp))){
+            $this->close($server,$client);
+            return;
+        }
+        $caller = null;
+        $response = new Response();
         try{
-            $command = $this->parserClass::decode($data,$client);
+            $caller = $this->config->getParser()->decode($data,$client);
         }catch (\Throwable $throwable){
-            Trigger::throwable($throwable);
+            $this->hookException($server,$throwable,$data,$client,$response);
         }
         //若解析器返回null，则调用errorHandler，且状态为包解析错误
-       if($command instanceof CommandBean){
+       if($caller instanceof Caller){
             //解包正确
-            $controller = $command->getControllerClass();
+           $controller = $caller->getControllerClass();
            try{
-               $response = new SplStream();
-               (new $controller($client,$command,$response));
-               $res = $this->parserClass::encode($response->__toString(),$client);
-               if($res !== null){
-                   $this->response($server,$client,$res);
-               }
+               (new $controller($caller,$response));
            }catch (\Throwable $throwable){
-               $res = $this->hookException($server,$throwable,$data,$client);
-               if($res){
-                   $res = $this->parserClass::encode($response->__toString(),$client);
-                   if($res !== null){
-                       $this->response($server,$client,$res);
-                   }
-               }
+               $this->hookException($server,$throwable,$data,$client,$response);
            }
-        }
+       }
+
+       switch ($response->getStatus()){
+           case Response::STATUS_OK:{
+               $res = $this->config->getParser()->encode($response,$client);
+               $this->response($server,$client,$res);
+               break;
+           }
+           case Response::STATUS_RESPONSE_AND_CLOSE:{
+               $res = $this->config->getParser()->encode($response,$client);
+               $this->response($server,$client,$res);
+               $this->close($server,$client);
+               break;
+           }
+           case Response::STATUS_RESPONSE_DETACH:{
+               break;
+           }
+           case Response::STATUS_CLOSE:{
+               $this->close($server,$client);
+               break;
+           }
+       }
     }
 
 
@@ -112,14 +114,19 @@ class Dispatcher
         }
     }
 
-    private function hookException(\swoole_server $server,\Throwable $throwable,string $raw,$client)
+    private function close(\swoole_server $server,$client)
     {
-        if(is_callable($this->exceptionHandler)){
-            return Invoker::callUserFunc($this->exceptionHandler,$throwable,$raw,$client);
+        if($client instanceof Tcp){
+            $server->close($client->getFd());
+        }
+    }
+
+    private function hookException(\swoole_server $server,\Throwable $throwable,string $raw,$client,Response $response)
+    {
+        if(is_callable($this->config->getOnExceptionHandler())){
+            call_user_func($this->config->getOnExceptionHandler(),$server,$throwable,$raw,$client,$response);
         }else{
-            if(!$client instanceof Udp){
-                $server->close($client->getFd());
-            }
+            Trigger::throwable($throwable);
         }
     }
 }

@@ -9,16 +9,12 @@
 namespace EasySwoole\Socket\AbstractInterface;
 
 
+use EasySwoole\Socket\Bean\Caller;
+use EasySwoole\Socket\Bean\Response;
+
 interface ParserInterface
 {
-    /*
-     * 若返回EasySwoole\Socket\Common\CommandBean，则为解析成功，
-     * 若返回NULL，则调用parser error 回调
-     */
-    public static function decode($raw,$client);
+    public function decode($raw,$client):?Caller;
 
-    /*
-     * $raw为控制器中响应的明文
-     */
-    public static function encode(string $raw,$client):?string ;
+    public function encode(Response $response,$client):?string ;
 }

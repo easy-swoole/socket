@@ -9,25 +9,19 @@
 namespace EasySwoole\Socket\AbstractInterface;
 
 
-use EasySwoole\Socket\CommandBean;
-use EasySwoole\Spl\SplStream;
+use EasySwoole\Socket\Bean\Caller;
+use EasySwoole\Socket\Bean\Response;
 
 abstract class Controller
 {
     private $response;
-    private $request;
+    private $caller;
 
-    protected abstract function client();
-
-    function __construct(CommandBean $request,SplStream $response)
+    function __construct(Caller $request,Response $response)
     {
-        $this->request = $request;
+        $this->caller = $request;
         $this->response = $response;
-        if($request->getAction() != '__construct'){
-            $this->__hook($request->getAction());
-        }else{
-            $response->write('do not try to call __construct');
-        }
+        $this->__hook();
     }
 
     protected function actionNotFound(?string $actionName)
@@ -35,17 +29,15 @@ abstract class Controller
 
     }
 
-    protected function afterAction($actionName)
+    protected function afterAction(?string $actionName)
     {
 
     }
 
-    protected function onException(\Throwable $throwable,$actionName):void
+    protected function onException(\Throwable $throwable):void
     {
         throw $throwable;
     }
-
-
 
     /*
      * 返回false的时候为拦截
@@ -55,38 +47,51 @@ abstract class Controller
         return true;
     }
 
-    protected function response()
+    protected function response():Response
     {
         return $this->response;
     }
 
-    protected function request():CommandBean
+    protected function caller():Caller
     {
-        return $this->request;
+        return $this->caller;
     }
 
 
-    protected function __hook(?string $actionName)
+    private function __hook()
     {
-        if($this->onRequest($actionName) === false){
-            return;
-        }
-        //支持在子类控制器中以private，protected来修饰某个方法不可见
-        $actionName = $this->request->getAction();
         try{
-            $ref = new \ReflectionClass(static::class);
-            if($ref->hasMethod($actionName)  && $ref->getMethod( $actionName)->isPublic()){
-                $this->$actionName();
+            if($this->onRequest($this->caller->getAction()) === false){
+                return;
             }else{
-                $this->actionNotFound($actionName);
+                $list = [];
+                $ref = new \ReflectionClass(static::class);
+                $public = $ref->getMethods(\ReflectionMethod::IS_PUBLIC);
+                foreach ($public as $item){
+                    array_push($list,$item->getName());
+                }
+                $all = array_diff($list,
+                    [
+                        'gc','__hook','__destruct',
+                        '__clone','__construct','__call',
+                        '__callStatic','__get','__set',
+                        '__isset','__unset','__sleep',
+                        '__wakeup','__toString','__invoke',
+                        '__set_state','__clone','__debugInfo'
+                    ]
+                );
+                $action = $this->caller->getAction();
+                if(in_array($action,$all)){
+                    $this->$action();
+                }else{
+                    $this->actionNotFound($action);
+                }
             }
         }catch (\Throwable $throwable){
-            $this->onException($throwable,$actionName);
-        }
-        try{
-            $this->afterAction($actionName);
-        }catch (\Throwable $throwable){
-            $this->onException($throwable,$actionName);
+            //若没有重构onException，直接抛出给上层
+            $this->onException($throwable);
+        }finally{
+            $this->afterAction($this->caller->getAction());
         }
     }
 }

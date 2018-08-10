@@ -9,9 +9,8 @@
 namespace EasySwoole\Socket\Client;
 
 
-class WebSocket
+class WebSocket extends Tcp
 {
-    private $fd;
     private $data;
     private $opCode;
     private $isFinish;
@@ -19,27 +18,11 @@ class WebSocket
     function __construct(\swoole_websocket_frame $frame = null)
     {
         if($frame){
-            $this->fd = $frame->fd;
+            parent::__construct($frame->fd);
             $this->data = $frame->data;
             $this->opCode = $frame->opcode;
             $this->isFinish = $frame->finish;
         }
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getFd()
-    {
-        return $this->fd;
-    }
-
-    /**
-     * @param mixed $fd
-     */
-    public function setFd($fd)
-    {
-        $this->fd = $fd;
     }
 
     /**
