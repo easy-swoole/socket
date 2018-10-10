@@ -14,7 +14,6 @@ use EasySwoole\Socket\Bean\Response;
 use EasySwoole\Socket\Client\Tcp;
 use EasySwoole\Socket\Client\Udp;
 use EasySwoole\Socket\Client\WebSocket;
-use EasySwoole\Trigger\Trigger;
 
 class Dispatcher
 {
@@ -126,7 +125,7 @@ class Dispatcher
         if(is_callable($this->config->getOnExceptionHandler())){
             call_user_func($this->config->getOnExceptionHandler(),$server,$throwable,$raw,$client,$response);
         }else{
-            Trigger::throwable($throwable);
+            throw $throwable;
         }
     }
 }

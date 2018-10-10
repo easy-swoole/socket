@@ -13,7 +13,8 @@
     ],
     "require": {
         "php": ">=7.1.0",
-        "easyswoole/spl": "^1.0"
+        "easyswoole/spl": "^1.0",
+        "easyswoole/trace": "^1.1"
     },
     "autoload": {
         "psr-4": {
