@@ -104,9 +104,9 @@ class Dispatcher
 
     private function response(\swoole_server $server,$client,$data)
     {
-        if($client instanceof Tcp){
+        if($client instanceof WebSocket){
             $server->send($client->getFd(),$data,$client->getReactorId());
-        }else if($client instanceof WebSocket){
+        }else if($client instanceof Tcp){
             $server->push($client->getFd(),$data);
         }else if($client instanceof Udp){
             $server->sendto($client->getAddress(),$client->getPort(),$data,$client->getServerSocket());
