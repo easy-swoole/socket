@@ -14,6 +14,7 @@ class Caller
     private $args = [];
     private $controllerClass = null;
     private $action = null;
+    private $client;
 
     /**
      * @return array
@@ -51,4 +52,21 @@ class Caller
     {
         $this->action = $action;
     }
+
+    /**
+     * @return mixed
+     */
+    public function getClient()
+    {
+        return $this->client;
+    }
+
+    /**
+     * @param mixed $client
+     */
+    public function setClient($client): void
+    {
+        $this->client = $client;
+    }
+
 }
