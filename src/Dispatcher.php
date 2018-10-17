@@ -111,7 +111,7 @@ class Dispatcher
         if($client instanceof WebSocket){
             $server->send($client->getFd(),$data,$client->getReactorId());
         }else if($client instanceof Tcp){
-            $server->push($client->getFd(),$data);
+            $server->send($client->getFd(),$data);
         }else if($client instanceof Udp){
             $server->sendto($client->getAddress(),$client->getPort(),$data,$client->getServerSocket());
         }
