@@ -68,7 +68,6 @@ class Dispatcher
         }catch (\Throwable $throwable){
             //注意，在解包出现异常的时候，则调用异常处理，默认是断开连接，服务端抛出异常
             $this->hookException($server,$throwable,$data,$client,$response);
-            return;
         }
         //如果成功返回一个调用者，那么执行调用逻辑
         if($caller instanceof Caller){
@@ -80,7 +79,6 @@ class Dispatcher
             }catch (\Throwable $throwable){
                 //若控制器中没有重写异常处理，默认是断开连接，服务端抛出异常
                 $this->hookException($server,$throwable,$data,$client,$response);
-                return;
             }
         }
         switch ($response->getStatus()){
