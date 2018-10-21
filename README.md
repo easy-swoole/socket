@@ -12,7 +12,7 @@ class C extends \EasySwoole\Socket\AbstractInterface\Controller{
 
     function test()
     {
-        $this->response()->setMessage(time());
+        $this->response()->addResult('time',time());
     }
 }
 
