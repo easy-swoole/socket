@@ -19,7 +19,8 @@ class Response extends SplBean
     const STATUS_OK = 'OK';
 
     protected $status = self::STATUS_OK;
-    protected $result = [];
+    protected $message = null;
+
     /**
      * @return string
      */
@@ -43,20 +44,19 @@ class Response extends SplBean
         $this->args = $args;
     }
 
-    public function setResult(array $result)
+    /**
+     * @return string
+     */
+    public function getMessage():?string
     {
-        $this->result = $result;
+        return $this->message;
     }
 
-    public function getResult():array
+    /**
+     * @param string $message
+     */
+    public function setMessage(?string $message): void
     {
-        return $this->result;
+        $this->message = $message;
     }
-
-    public function addResult($key,$value):Response
-    {
-        $this->result[$key] = $value;
-        return $this;
-    }
-
 }
