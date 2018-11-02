@@ -75,7 +75,7 @@ class Dispatcher
             //解包正确
             $controller = $caller->getControllerClass();
             try{
-                (new $controller($caller,$response));
+                (new $controller($server,$this->config,$caller,$response));
             }catch (\Throwable $throwable){
                 //若控制器中没有重写异常处理，默认是断开连接，服务端抛出异常
                 $this->hookException($server,$throwable,$data,$client,$response);
