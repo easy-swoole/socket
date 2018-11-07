@@ -40,26 +40,19 @@ class Dispatcher
         switch ($type){
             case Config::TCP:{
                 $client = new Tcp( ...$args);
-                $clientIp = $server->getClientInfo($client->getFd())['remote_ip'];
                 break;
             }
             case Config::WEB_SOCKET:{
                 $client = new WebSocket( ...$args);
-                $clientIp = $server->getClientInfo($client->getFd())['remote_ip'];
                 break;
             }
             case Config::UDP:{
                 $client = new Udp( ...$args);
-                $clientIp = $client->getAddress();
                 break;
             }
             default:{
                 throw new \Exception('dispatcher type error : '.$type);
             }
-        }
-        if($this->config->getIpWhiteList() && (!$this->config->getIpWhiteList()->check($clientIp))){
-            $this->close($server,$client);
-            return;
         }
         $caller = null;
         $response = new Response();
