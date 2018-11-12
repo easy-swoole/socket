@@ -10,7 +10,6 @@ namespace EasySwoole\Socket;
 
 
 use EasySwoole\Socket\AbstractInterface\ParserInterface;
-use EasySwoole\Socket\Bean\IpWhiteList;
 
 class Config
 {
@@ -23,18 +22,6 @@ class Config
     protected $parser;
     protected $ipWhiteList = null;
 
-    public function getIpWhiteList():?IpWhiteList
-    {
-        return $this->ipWhiteList;
-    }
-
-    function setIpWhiteList():IpWhiteList
-    {
-        if(!isset($this->ipWhiteList)){
-            $this->ipWhiteList = new IpWhiteList();
-        }
-        return $this->ipWhiteList;
-    }
 
     /**
      * @return mixed
