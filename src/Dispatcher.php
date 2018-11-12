@@ -100,9 +100,13 @@ class Dispatcher
     private function response(\swoole_server $server,$client,$data)
     {
         if($client instanceof WebSocket){
-            $server->push($client->getFd(),$data);
+            if($server->exist($client->getFd())){
+                $server->push($client->getFd(),$data);
+            }
         }else if($client instanceof Tcp){
-            $server->send($client->getFd(),$data);
+            if($server->exist($client->getFd())){
+                $server->send($client->getFd(),$data);
+            }
         }else if($client instanceof Udp){
             $server->sendto($client->getAddress(),$client->getPort(),$data,$client->getServerSocket());
         }
@@ -111,7 +115,9 @@ class Dispatcher
     private function close(\swoole_server $server,$client)
     {
         if($client instanceof Tcp){
-            $server->close($client->getFd());
+            if($server->exist($client->getFd())){
+                $server->close($client->getFd());
+            }
         }
     }
 
