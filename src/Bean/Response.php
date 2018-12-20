@@ -13,7 +13,6 @@ use EasySwoole\Spl\SplBean;
 
 class Response extends SplBean
 {
-    const STATUS_RESPONSE_DETACH = 'RESPONSE_DETACH';//不响应客户端，可能是在异步时返回。
     const STATUS_RESPONSE_AND_CLOSE = 'RESPONSE_AND_CLOSE';//响应后关闭
     const STATUS_CLOSE = 'CLOSE';//不响应，直接关闭连接
     const STATUS_OK = 'OK';

@@ -84,9 +84,6 @@ class Dispatcher
                 $this->close($server,$client);
                 break;
             }
-            case Response::STATUS_RESPONSE_DETACH:{
-                break;
-            }
             case Response::STATUS_CLOSE:{
                 $this->close($server,$client);
                 break;
