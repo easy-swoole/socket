@@ -76,13 +76,11 @@ class Dispatcher
         }
         switch ($response->getStatus()){
             case Response::STATUS_OK:{
-                $res = $this->config->getParser()->encode($response,$client);
-                $this->response($server,$client,$res);
+                $this->response($server,$client,$response);
                 break;
             }
             case Response::STATUS_RESPONSE_AND_CLOSE:{
-                $res = $this->config->getParser()->encode($response,$client);
-                $this->response($server,$client,$res);
+                $this->response($server,$client,$response);
                 $this->close($server,$client);
                 break;
             }
@@ -97,8 +95,12 @@ class Dispatcher
     }
 
 
-    private function response(\swoole_server $server,$client,$data)
+    private function response(\swoole_server $server,$client,Response $response)
     {
+        $data = $this->config->getParser()->encode($response,$client);
+        if($data === null){
+            return;
+        }
         if($client instanceof WebSocket){
             if($server->exist($client->getFd())){
                 $server->push($client->getFd(),$data);
