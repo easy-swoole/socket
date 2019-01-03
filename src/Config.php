@@ -20,8 +20,8 @@ class Config
     protected $type;
     protected $onExceptionHandler = null;
     protected $parser;
-    protected $ipWhiteList = null;
-
+    protected $maxPoolNum = 200;
+    protected $controllerPoolWaitTime = 1;
 
     /**
      * @return mixed
@@ -58,7 +58,7 @@ class Config
     /**
      * @return mixed
      */
-    public function getParser():?ParserInterface
+    public function getParser()
     {
         return $this->parser;
     }
@@ -66,9 +66,40 @@ class Config
     /**
      * @param mixed $parser
      */
-    public function setParser(ParserInterface $parser): void
+    public function setParser($parser): void
     {
         $this->parser = $parser;
     }
-    
+
+    /**
+     * @return int
+     */
+    public function getMaxPoolNum(): int
+    {
+        return $this->maxPoolNum;
+    }
+
+    /**
+     * @param int $maxPoolNum
+     */
+    public function setMaxPoolNum(int $maxPoolNum): void
+    {
+        $this->maxPoolNum = $maxPoolNum;
+    }
+
+    /**
+     * @return int
+     */
+    public function getControllerPoolWaitTime(): int
+    {
+        return $this->controllerPoolWaitTime;
+    }
+
+    /**
+     * @param int $controllerPoolWaitTime
+     */
+    public function setControllerPoolWaitTime(int $controllerPoolWaitTime): void
+    {
+        $this->controllerPoolWaitTime = $controllerPoolWaitTime;
+    }
 }

@@ -9,16 +9,19 @@
 namespace EasySwoole\Socket;
 
 
+use EasySwoole\Socket\AbstractInterface\Controller;
 use EasySwoole\Socket\Bean\Caller;
 use EasySwoole\Socket\Bean\Response;
 use EasySwoole\Socket\Client\Tcp;
 use EasySwoole\Socket\Client\Udp;
 use EasySwoole\Socket\Client\WebSocket;
+use EasySwoole\Socket\Exception\ControllerPoolEmpty;
+use Swoole\Coroutine as Co;
 
 class Dispatcher
 {
     private $config;
-
+    private $controllerPoolCreateNum = [];
     function __construct(Config $config)
     {
         $this->config = $config;
@@ -61,32 +64,47 @@ class Dispatcher
         }catch (\Throwable $throwable){
             //注意，在解包出现异常的时候，则调用异常处理，默认是断开连接，服务端抛出异常
             $this->hookException($server,$throwable,$data,$client,$response);
+            goto response;
         }
         //如果成功返回一个调用者，那么执行调用逻辑
         if($caller instanceof Caller){
             $caller->setClient($client);
             //解包正确
-            $controller = $caller->getControllerClass();
+            $controllerClass = $caller->getControllerClass();
             try{
-                (new $controller($server,$this->config,$caller,$response));
+                $controller = $this->getController($controllerClass);
             }catch (\Throwable $throwable){
-                //若控制器中没有重写异常处理，默认是断开连接，服务端抛出异常
+                $this->hookException($server,$throwable,$data,$client,$response);
+                goto response;
+            }
+            if($controller instanceof Controller){
+                try{
+                    $controller->__hook( $server,$this->config, $caller, $response);
+                }catch (\Throwable $throwable){
+                    $this->hookException($server,$throwable,$data,$client,$response);
+                }finally {
+                    $this->recycleController($controllerClass,$controller);
+                }
+            }else{
+                $throwable = new ControllerPoolEmpty('controller pool empty for '.$controllerClass);
                 $this->hookException($server,$throwable,$data,$client,$response);
             }
         }
-        switch ($response->getStatus()){
-            case Response::STATUS_OK:{
-                $this->response($server,$client,$response);
-                break;
-            }
-            case Response::STATUS_RESPONSE_AND_CLOSE:{
-                $this->response($server,$client,$response);
-                $this->close($server,$client);
-                break;
-            }
-            case Response::STATUS_CLOSE:{
-                $this->close($server,$client);
-                break;
+        response :{
+            switch ($response->getStatus()){
+                case Response::STATUS_OK:{
+                    $this->response($server,$client,$response);
+                    break;
+                }
+                case Response::STATUS_RESPONSE_AND_CLOSE:{
+                    $this->response($server,$client,$response);
+                    $this->close($server,$client);
+                    break;
+                }
+                case Response::STATUS_CLOSE:{
+                    $this->close($server,$client);
+                    break;
+                }
             }
         }
     }
@@ -128,5 +146,46 @@ class Dispatcher
             $this->close($server,$client);
             throw $throwable;
         }
+    }
+
+    private function generateClassKey(string $class):string
+    {
+        return substr(md5($class), 8, 16);
+    }
+
+    private function getController(string $class)
+    {
+        $classKey = $this->generateClassKey($class);
+        if(!isset($this->$classKey)){
+            $this->$classKey = new Co\Channel($this->config->getMaxPoolNum()+1);
+            $this->controllerPoolCreateNum[$classKey] = 0;
+        }
+        $channel = $this->$classKey;
+        //懒惰创建模式
+        /** @var Co\Channel $channel */
+        if($channel->isEmpty()){
+            $createNum = $this->controllerPoolCreateNum[$classKey];
+            if($createNum < $this->config->getMaxPoolNum()){
+                $this->controllerPoolCreateNum[$classKey] = $createNum + 1;
+                try{
+                    //防止用户在控制器结构函数做了什么东西导致异常
+                    return new $class();
+                }catch (\Throwable $exception){
+                    $this->controllerPoolCreateNum[$classKey] = $createNum;
+                    //直接抛给上层
+                    throw $exception;
+                }
+            }
+            return $channel->pop($this->config->getControllerPoolWaitTime());
+        }
+        return $channel->pop($this->config->getControllerPoolWaitTime());
+    }
+
+    private function recycleController(string $class,Controller $obj)
+    {
+        $classKey = $this->generateClassKey($class);
+        /** @var Co\Channel $channel */
+        $channel = $this->$classKey;
+        $channel->push($obj);
     }
 }
