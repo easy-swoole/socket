@@ -35,26 +35,19 @@ class Response extends SplBean
     {
         $this->status = $status;
     }
-    /**
-     * @param array $args
-     */
-    public function setArgs(array $args): void
-    {
-        $this->args = $args;
-    }
 
     /**
-     * @return string
+     * @return mixed
      */
-    public function getMessage():?string
+    public function getMessage()
     {
         return $this->message;
     }
 
     /**
-     * @param string $message
+     * @param mixed $message
      */
-    public function setMessage(?string $message): void
+    public function setMessage($message): void
     {
         $this->message = $message;
     }
