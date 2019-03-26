@@ -2,14 +2,14 @@
 /**
  * Created by PhpStorm.
  * User: yf
- * Date: 2019-01-03
- * Time: 23:39
+ * Date: 2019-03-26
+ * Time: 18:19
  */
 
 namespace EasySwoole\Socket\Exception;
 
 
-class ControllerPoolEmpty extends Exception
+class Exception extends \Exception
 {
 
 }
