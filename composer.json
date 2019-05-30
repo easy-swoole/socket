@@ -13,8 +13,7 @@
     ],
     "require": {
         "php": ">=7.1.0",
-        "easyswoole/spl": "^1.0",
-        "easyswoole/trace": "^1.1"
+        "easyswoole/spl": "^1.0"
     },
     "autoload": {
         "psr-4": {
@@ -23,6 +22,6 @@
     },
     "require-dev": {
         "easyswoole/swoole-ide-helper": "dev-master",
-        "phpunit/phpunit" : "^5.6"
+        "easyswoole/phpunit" : "^1.0"
     }
 }
