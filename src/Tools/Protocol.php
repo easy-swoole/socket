@@ -45,4 +45,17 @@ class Protocol
         }
         return $ret;
     }
+
+    public static function unixSocketSendAndRecv(string $socketFile,$data, float $timeout = 3.0)
+    {
+        $client = new Client($socketFile);
+        $client->send(serialize($data));
+        $ret = $client->recv($timeout);
+        $client->close();
+        if (empty($ret)) {
+            return null;
+        }
+        $data = unserialize($ret);
+        return $data;
+    }
 }
