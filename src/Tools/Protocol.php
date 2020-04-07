@@ -45,6 +45,6 @@ class Protocol
 
     public static function socketWriter(Socket $socket,string $rawData,float $timeout = 3.0)
     {
-        return $socket->send(self::pack($rawData),$timeout);
+        return $socket->sendAll(self::pack($rawData),$timeout);
     }
 }
