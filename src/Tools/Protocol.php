@@ -29,7 +29,7 @@ class Protocol
         return substr($data,4);
     }
 
-    public static function socketReader(Socket $socket,float $timeout = 3.0,bool $autoClose = true):?string
+    public static function socketReader(Socket $socket,float $timeout = 3.0):?string
     {
         $ret = null;
         $header = $socket->recvAll(4,$timeout);
@@ -40,9 +40,11 @@ class Protocol
                 $ret = $data;
             }
         }
-        if($autoClose){
-            $socket->close();
-        }
         return $ret;
+    }
+
+    public static function socketWriter(Socket $socket,string $rawData,float $timeout = 3.0)
+    {
+        return $socket->send(self::pack($rawData),$timeout);
     }
 }
