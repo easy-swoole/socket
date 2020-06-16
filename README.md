@@ -62,7 +62,7 @@ class Parser implements ParserInterface{
 
 }
 
-$server = new swoole_server("127.0.0.1", 9501);
+$server = new \Swoole\Server("127.0.0.1", 9501);
 $server->set([
     'worker_num'=>1
 ]);

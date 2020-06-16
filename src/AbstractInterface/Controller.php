@@ -111,7 +111,7 @@ abstract class Controller
         }
     }
 
-    public function __hook(\swoole_server $server,Config $config,Caller $request,Response $response)
+    public function __hook(\Swoole\Server $server,Config $config,Caller $request,Response $response)
     {
         $this->caller = $request;
         $this->response = $response;
