@@ -36,7 +36,7 @@ class Dispatcher
      *  Web Socket swoole_websocket_frame $frame
      *  Udp array $client_info;
      */
-    function dispatch(\swoole_server $server ,string $data, ...$args):void
+    function dispatch(\Swoole\Server $server ,string $data, ...$args):void
     {
         $clientIp = null;
         $type = $this->config->getType();
@@ -110,7 +110,7 @@ class Dispatcher
     }
 
 
-    private function response(\swoole_server $server,$client,Response $response)
+    private function response(\Swoole\Server $server,$client,Response $response)
     {
         $data = $this->config->getParser()->encode($response,$client);
         if($data === null){
@@ -129,7 +129,7 @@ class Dispatcher
         }
     }
 
-    private function close(\swoole_server $server,$client)
+    private function close(\Swoole\Server $server,$client)
     {
         if($client instanceof Tcp){
             if($server->exist($client->getFd())){
@@ -138,7 +138,7 @@ class Dispatcher
         }
     }
 
-    private function hookException(\swoole_server $server,\Throwable $throwable,string $raw,$client,Response $response)
+    private function hookException(\Swoole\Server $server,\Throwable $throwable,string $raw,$client,Response $response)
     {
         if(is_callable($this->config->getOnExceptionHandler())){
             call_user_func($this->config->getOnExceptionHandler(),$server,$throwable,$raw,$client,$response);

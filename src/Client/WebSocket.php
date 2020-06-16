@@ -15,7 +15,7 @@ class WebSocket extends Tcp
     private $opCode;
     private $isFinish;
 
-    function __construct(\swoole_websocket_frame $frame = null)
+    function __construct(\Swoole\Websocket\Frame $frame = null)
     {
         if($frame){
             parent::__construct($frame->fd);
