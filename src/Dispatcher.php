@@ -99,11 +99,11 @@ class Dispatcher
                 }
                 case Response::STATUS_RESPONSE_AND_CLOSE:{
                     $this->response($server,$client,$response);
-                    $this->close($server,$client);
+                    $this->close($server, $client, $response);
                     break;
                 }
                 case Response::STATUS_CLOSE:{
-                    $this->close($server,$client);
+                    $this->close($server, $client, $response);
                     break;
                 }
             }
@@ -130,13 +130,15 @@ class Dispatcher
         }
     }
 
-    private function close(Server $server, $client)
+    private function close(Server $server, $client, Response $response)
     {
-        //websocket客户端继承自TCP
-        if($client instanceof Tcp){
-            if($server->exist($client->getFd())){
-                $server->close($client->getFd());
-            }
+
+        // because websocket client extends tcp client, so first if websocket client.
+        if ($client instanceof WebSocket && $server->exist($client->getFd())) {
+            /**@var \Swoole\WebSocket\Server $server */
+            $server->disconnect($client->getFd(), $response->getCode(), $response->getReason());
+        } else if($client instanceof Tcp && $server->exist($client->getFd())){
+            $server->close($client->getFd(), $response->isReset());
         }
     }
 
@@ -145,7 +147,7 @@ class Dispatcher
         if(is_callable($this->config->getOnExceptionHandler())){
             call_user_func($this->config->getOnExceptionHandler(),$server,$throwable,$raw,$client,$response);
         }else{
-            $this->close($server,$client);
+            $this->close($server, $client, $response);
             throw $throwable;
         }
     }

@@ -24,6 +24,23 @@ class Response extends SplBean
      */
     protected $opCode = WEBSOCKET_OPCODE_TEXT;
     protected $finish = true;
+
+    /**
+     * tcp client 单独参数
+     */
+    /**
+     * @var bool $reset
+     */
+    protected $reset = false;
+
+    /**
+     * ws client 单独参数
+     */
+    /** @var int $code */
+    protected $code = SWOOLE_WEBSOCKET_CLOSE_NORMAL;
+    /** @var string|null $reason */
+    protected $reason = null;
+
     /**
      * @return string
      */
@@ -88,4 +105,51 @@ class Response extends SplBean
         $this->finish = $finish;
     }
 
+    /**
+     * @return bool
+     */
+    public function isReset(): bool
+    {
+        return $this->reset;
+    }
+
+    /**
+     * @param bool $reset
+     */
+    public function setReset(bool $reset): void
+    {
+        $this->reset = $reset;
+    }
+
+    /**
+     * @return int
+     */
+    public function getCode(): int
+    {
+        return $this->code;
+    }
+
+    /**
+     * @param int $code
+     */
+    public function setCode(int $code): void
+    {
+        $this->code = $code;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getReason(): ?string
+    {
+        return $this->reason;
+    }
+
+    /**
+     * @param string $reason
+     */
+    public function setReason(string $reason): void
+    {
+        $this->reason = $reason;
+    }
 }
