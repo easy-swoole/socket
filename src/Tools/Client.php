@@ -8,7 +8,7 @@ class Client
 {
     private $client = null;
 
-    function __construct(string $unixSock,?int $port = null)
+    function __construct(string $unixSock,?int $port = null,float $timeout = 3)
     {
         if($port > 0){
             $this->client = new SwooleClient(SWOOLE_SOCK_TCP);
@@ -25,7 +25,12 @@ class Client
                 'package_max_length'    => 1024*1024
             ]
         );
-        $this->client->connect($unixSock, $port, 3);
+
+        if(version_compare(phpversion('swoole'),"4.8.0",">=")){
+            $this->client->connect($unixSock, $timeout);
+        }else{
+            $this->client->connect($unixSock, $port, $timeout);
+        }
     }
 
     function client():SwooleClient

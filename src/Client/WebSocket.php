@@ -9,13 +9,15 @@
 namespace EasySwoole\Socket\Client;
 
 
+use Swoole\Websocket\Frame;
+
 class WebSocket extends Tcp
 {
     private $data;
     private $opCode;
     private $isFinish;
 
-    function __construct(\Swoole\Websocket\Frame $frame = null)
+    function __construct(Frame $frame = null)
     {
         if($frame){
             parent::__construct($frame->fd);
@@ -60,7 +62,7 @@ class WebSocket extends Tcp
     /**
      * @return mixed
      */
-    public function getisFinish()
+    public function getIsFinish()
     {
         return $this->isFinish;
     }
