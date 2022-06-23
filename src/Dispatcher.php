@@ -73,18 +73,16 @@ class Dispatcher
             //解包正确
             $controllerClass = $caller->getControllerClass();
             try{
-                $controller = $this->getController($controllerClass);
+                $controller = new $controllerClass();
             }catch (\Throwable $throwable){
                 $this->hookException($server,$throwable,$data,$client,$response);
                 goto response;
             }
             if($controller instanceof Controller){
                 try{
-                    $controller->__hook( $server,$this->config, $caller, $response);
+                    $controller->__hook( $server,$caller, $response);
                 }catch (\Throwable $throwable){
                     $this->hookException($server,$throwable,$data,$client,$response);
-                }finally {
-                    $this->recycleController($controllerClass,$controller);
                 }
             }else{
                 $throwable = new ControllerPoolEmpty('controller pool empty for '.$controllerClass);
@@ -150,46 +148,5 @@ class Dispatcher
             $this->close($server, $client, $response);
             throw $throwable;
         }
-    }
-
-    private function generateClassKey(string $class):string
-    {
-        return substr(md5($class), 8, 16);
-    }
-
-    private function getController(string $class)
-    {
-        $classKey = $this->generateClassKey($class);
-        if(!isset($this->$classKey)){
-            $this->$classKey = new Co\Channel($this->config->getMaxPoolNum()+1);
-            $this->controllerPoolCreateNum[$classKey] = 0;
-        }
-        $channel = $this->$classKey;
-        //懒惰创建模式
-        /** @var Co\Channel $channel */
-        if($channel->isEmpty()){
-            $createNum = $this->controllerPoolCreateNum[$classKey];
-            if($createNum < $this->config->getMaxPoolNum()){
-                $this->controllerPoolCreateNum[$classKey] = $createNum + 1;
-                try{
-                    //防止用户在控制器结构函数做了什么东西导致异常
-                    return new $class();
-                }catch (\Throwable $exception){
-                    $this->controllerPoolCreateNum[$classKey] = $createNum;
-                    //直接抛给上层
-                    throw $exception;
-                }
-            }
-            return $channel->pop($this->config->getControllerPoolWaitTime());
-        }
-        return $channel->pop($this->config->getControllerPoolWaitTime());
-    }
-
-    private function recycleController(string $class,Controller $obj)
-    {
-        $classKey = $this->generateClassKey($class);
-        /** @var Co\Channel $channel */
-        $channel = $this->$classKey;
-        $channel->push($obj);
     }
 }

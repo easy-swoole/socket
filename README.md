@@ -70,7 +70,6 @@ $server->set([
 $conf = new \EasySwoole\Socket\Config();
 $conf->setType($conf::TCP);
 $conf->setParser(new Parser());
-$conf->setMaxPoolNum(2);
 $conf->setOnExceptionHandler(function (\swoole_server $server,\Throwable $throwable,string $raw,$client,Response $response){
     $response->setStatus('error');
     $response->setStatus($response::STATUS_RESPONSE_AND_CLOSE);
