@@ -16,14 +16,9 @@ use PHPUnit\Framework\TestCase;
 use Swoole\Server;
 use Swoole\WebSocket\Frame;
 
-final class ActionAllowListController extends Controller
+final class PublicActionController extends Controller
 {
     public ?string $calledAction = null;
-
-    protected function actionAllowList(): array
-    {
-        return ['allowed'];
-    }
 
     public function allowed(): void
     {
@@ -33,6 +28,11 @@ final class ActionAllowListController extends Controller
     public function helper(): void
     {
         $this->calledAction = 'helper';
+    }
+
+    protected function protectedHelper(): void
+    {
+        $this->calledAction = 'protected-helper';
     }
 
     protected function actionNotFound(?string $actionName): void
@@ -61,11 +61,6 @@ final class ControllerClientParser implements ParserInterface
 final class ClientInspectionController extends Controller
 {
     public static array $connection = [];
-
-    protected function actionAllowList(): array
-    {
-        return ['inspect'];
-    }
 
     public function inspect(): void
     {
@@ -100,11 +95,6 @@ final class ImmediateResponseController extends Controller
 {
     public ?bool $sendResult = null;
 
-    protected function actionAllowList(): array
-    {
-        return ['sendNow'];
-    }
-
     public function sendNow(): void
     {
         $this->sendResult = $this->responseImmediately('immediate-response');
@@ -116,11 +106,6 @@ final class FailingLifecycleController extends Controller
     public function __construct(private readonly bool $failAction, private readonly bool $failAfterAction)
     {
         parent::__construct();
-    }
-
-    protected function actionAllowList(): array
-    {
-        return ['handle'];
     }
 
     public function handle(): void
@@ -184,16 +169,30 @@ final class ImmediateResponseServer extends \Swoole\WebSocket\Server
 
 final class ControllerTest extends TestCase
 {
-    public function testCallsAllowListedAction(): void
+    public function testCallsPublicAction(): void
     {
         $controller = $this->dispatchAction('allowed');
 
         self::assertSame('allowed', $controller->calledAction);
     }
 
-    public function testRejectsPublicMethodOutsideAllowList(): void
+    public function testCallsEveryPublicAction(): void
     {
         $controller = $this->dispatchAction('helper');
+
+        self::assertSame('helper', $controller->calledAction);
+    }
+
+    public function testRejectsControllerMethodAsAction(): void
+    {
+        $controller = $this->dispatchAction('__hook');
+
+        self::assertSame('not-found', $controller->calledAction);
+    }
+
+    public function testRejectsProtectedMethodAsAction(): void
+    {
+        $controller = $this->dispatchAction('protectedHelper');
 
         self::assertSame('not-found', $controller->calledAction);
     }
@@ -307,15 +306,15 @@ final class ControllerTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('webSocket client requires a WebSocket server');
 
-        (new ActionAllowListController())->__hook(testServer(), $caller, new Response());
+        (new PublicActionController())->__hook(testServer(), $caller, new Response());
     }
 
-    private function dispatchAction(string $action): ActionAllowListController
+    private function dispatchAction(string $action): PublicActionController
     {
         $caller = new Caller();
         $caller->setClient(new Tcp(1, 0));
         $caller->setAction($action);
-        $controller = new ActionAllowListController();
+        $controller = new PublicActionController();
         $controller->__hook(testServer(), $caller, new Response());
 
         return $controller;

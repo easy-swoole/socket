@@ -30,11 +30,6 @@ final class UnsafeControllerTarget
 
 final class DispatcherTestController extends Controller
 {
-    protected function actionAllowList(): array
-    {
-        return ['handle'];
-    }
-
     public function handle(): void
     {
     }
@@ -102,11 +97,6 @@ final class ResponseParser implements ParserInterface
 
 final class WithoutResponseController extends Controller
 {
-    protected function actionAllowList(): array
-    {
-        return ['handle'];
-    }
-
     public function handle(): void
     {
         $this->response()->setStatus(ResponseStatus::WITHOUT_RESPONSE);
@@ -136,11 +126,6 @@ final class WithoutResponseParser implements ParserInterface
 
 final class CloseResponseController extends Controller
 {
-    protected function actionAllowList(): array
-    {
-        return ['handle'];
-    }
-
     public function handle(): void
     {
         $args = $this->caller()->getArgs();

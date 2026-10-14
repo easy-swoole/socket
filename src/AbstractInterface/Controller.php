@@ -32,7 +32,9 @@ abstract class Controller
         $ref = new \ReflectionClass(static::class);
         $public = $ref->getMethods(\ReflectionMethod::IS_PUBLIC);
         foreach ($public as $item){
-            array_push($list,$item->getName());
+            if(!$item->isStatic()){
+                array_push($list,$item->getName());
+            }
         }
         $this->allowMethods = array_diff($list,
             [
@@ -68,9 +70,6 @@ abstract class Controller
     {
         return true;
     }
-
-    /** @return list<string> */
-    abstract protected function actionAllowList(): array;
 
     protected function response():Response
     {
@@ -111,9 +110,8 @@ abstract class Controller
         $actionName = $request->getAction();
         $actionThrowable = null;
         try{
-            $allowMethods = array_intersect($this->allowMethods, $this->actionAllowList());
             if($this->onRequest($actionName) !== false){
-                if(in_array($actionName,$allowMethods, true)){
+                if(in_array($actionName,$this->allowMethods, true)){
                     $this->$actionName();
                 }else{
                     $this->actionNotFound($actionName);

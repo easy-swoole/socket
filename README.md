@@ -68,7 +68,7 @@ WebSocket 客户端类继承自 `Tcp`，因此接口统一使用 `Tcp|Udp`。需
 
 ## Controller
 
-每个 Controller 必须显式提供 action 白名单：
+Controller 会自动把业务控制器的 `public` 方法识别为可访问 action。需要禁止外部调用的方法应声明为 `protected` 或 `private`；`Controller` 基类方法和魔术方法不会作为 action：
 
 ```php
 <?php
@@ -80,11 +80,6 @@ use EasySwoole\Socket\Enum\ResponseStatus;
 
 final class EchoController extends Controller
 {
-    protected function actionAllowList(): array
-    {
-        return ['echo', 'notify'];
-    }
-
     protected function onRequest(?string $actionName): bool
     {
         return true;
