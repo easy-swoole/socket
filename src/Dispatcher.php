@@ -15,49 +15,47 @@ use EasySwoole\Socket\Bean\Response;
 use EasySwoole\Socket\Client\Tcp;
 use EasySwoole\Socket\Client\Udp;
 use EasySwoole\Socket\Client\WebSocket;
-use EasySwoole\Socket\Exception\ControllerPoolEmpty;
-use Swoole\Coroutine as Co;
+use EasySwoole\Socket\Enum\ResponseStatus;
+use EasySwoole\Socket\Enum\SocketType;
+use EasySwoole\Socket\Exception\InvalidController;
 use Swoole\Server;
+use Swoole\WebSocket\Frame;
+use Swoole\WebSocket\Server as WebSocketServer;
 
 class Dispatcher
 {
-    private $config;
-    private $controllerPoolCreateNum = [];
-    function __construct(Config $config)
+    private Config $config;
+
+    public function __construct(Config $config)
     {
         $this->config = $config;
-        if($config->getParser() == null){
-            throw new \Exception('Package parser is required');
-        }
     }
 
-    /*
-     * $args:
-     *  Tcp  $fd，$reactorId
-     *  Web Socket swoole_websocket_frame $frame
-     *  Udp array $client_info;
-     */
-    function dispatch(Server $server , string $data, ...$args):void
+    public function dispatchTcp(Server $server, string $data, int $fd, int $reactorId): void
     {
-        $clientIp = null;
-        $type = $this->config->getType();
-        switch ($type){
-            case Config::TCP:{
-                $client = new Tcp( ...$args);
-                break;
-            }
-            case Config::WEB_SOCKET:{
-                $client = new WebSocket( ...$args);
-                break;
-            }
-            case Config::UDP:{
-                $client = new Udp( ...$args);
-                break;
-            }
-            default:{
-                throw new \Exception('dispatcher type error : '.$type);
-            }
-        }
+        $this->assertSocketType(SocketType::TCP);
+        $this->dispatchClient($server, $data, new Tcp($fd, $reactorId));
+    }
+
+    public function dispatchUdp(
+        Server $server,
+        string $data,
+        int $serverSocket,
+        string $address,
+        int $port
+    ): void {
+        $this->assertSocketType(SocketType::UDP);
+        $this->dispatchClient($server, $data, new Udp($serverSocket, $address, $port));
+    }
+
+    public function dispatchWebSocket(WebSocketServer $server, Frame $frame): void
+    {
+        $this->assertSocketType(SocketType::WEB_SOCKET);
+        $this->dispatchClient($server, $frame->data, new WebSocket($frame));
+    }
+
+    private function dispatchClient(Server $server, string $data, Tcp|Udp $client): void
+    {
         $caller = null;
         $response = new Response();
         try{
@@ -73,51 +71,70 @@ class Dispatcher
             //解包正确
             $controllerClass = $caller->getControllerClass();
             try{
+                if (!is_string($controllerClass)
+                    || !is_a($controllerClass, Controller::class, true)) {
+                    throw new InvalidController('invalid controller class: '.var_export($controllerClass, true));
+                }
                 $controller = new $controllerClass();
             }catch (\Throwable $throwable){
                 $this->hookException($server,$throwable,$data,$client,$response);
                 goto response;
             }
-            if($controller instanceof Controller){
-                try{
-                    $controller->__hook( $server,$caller, $response);
-                }catch (\Throwable $throwable){
-                    $this->hookException($server,$throwable,$data,$client,$response);
-                }
-            }else{
-                $throwable = new ControllerPoolEmpty('controller pool empty for '.$controllerClass);
+            try{
+                $controller->__hook( $server,$caller, $response);
+            }catch (\Throwable $throwable){
                 $this->hookException($server,$throwable,$data,$client,$response);
             }
         }
         response :{
-            switch ($response->getStatus()){
-                case Response::STATUS_OK:{
-                    $this->response($server,$client,$response);
-                    break;
+            try {
+                switch ($response->getStatus()){
+                    case ResponseStatus::OK:{
+                        $this->response($server,$client,$response);
+                        break;
+                    }
+                    case ResponseStatus::WITHOUT_RESPONSE:{
+                        break;
+                    }
+                    case ResponseStatus::RESPONSE_AND_CLOSE:{
+                        $this->response($server,$client,$response);
+                        $this->close($server, $client, $response);
+                        break;
+                    }
+                    case ResponseStatus::CLOSE:{
+                        $this->close($server, $client, $response);
+                        break;
+                    }
                 }
-                case Response::STATUS_RESPONSE_AND_CLOSE:{
-                    $this->response($server,$client,$response);
-                    $this->close($server, $client, $response);
-                    break;
-                }
-                case Response::STATUS_CLOSE:{
-                    $this->close($server, $client, $response);
-                    break;
-                }
+            } catch (\Throwable $throwable) {
+                $this->hookException($server,$throwable,$data,$client,$response);
             }
         }
     }
 
+    private function assertSocketType(SocketType $expectedType): void
+    {
+        $actualType = $this->config->getType();
+        if ($actualType !== $expectedType) {
+            throw new \LogicException(sprintf(
+                'dispatcher socket type must be %s, %s given',
+                $expectedType->value,
+                $actualType->value
+            ));
+        }
+    }
 
-    private function response(Server $server, $client, Response $response)
+
+    private function response(Server $server, Tcp|Udp $client, Response $response): void
     {
         $data = $this->config->getParser()->encode($response,$client);
         if($data === null){
             return;
         }
         if($client instanceof WebSocket){
-            if($server->exist($client->getFd())){
-                $server->push($client->getFd(),$data,$response->getOpCode(),$response->isFinish());
+            $webSocketServer = $this->webSocketServer($server);
+            if($webSocketServer->exist($client->getFd())){
+                $webSocketServer->push($client->getFd(), $data, $response->getOpCode(), $response->getFlags());
             }
         }else if($client instanceof Tcp){
             if($server->exist($client->getFd())){
@@ -128,22 +145,40 @@ class Dispatcher
         }
     }
 
-    private function close(Server $server, $client, Response $response)
+    private function close(Server $server, Tcp|Udp $client, Response $response): void
     {
 
         // because websocket client extends tcp client, so first if websocket client.
-        if ($client instanceof WebSocket && $server->exist($client->getFd())) {
-            /**@var \Swoole\WebSocket\Server $server */
-            $server->disconnect($client->getFd(), $response->getCode(), $response->getReason());
+        if ($client instanceof WebSocket) {
+            $webSocketServer = $this->webSocketServer($server);
+            if ($webSocketServer->exist($client->getFd())) {
+                $webSocketServer->disconnect($client->getFd(), $response->getCode(), $response->getReason());
+            }
         } else if($client instanceof Tcp && $server->exist($client->getFd())){
             $server->close($client->getFd(), $response->isReset());
         }
     }
 
-    private function hookException(Server $server, \Throwable $throwable, string $raw, $client, Response $response)
+    private function webSocketServer(Server $server): WebSocketServer
     {
-        if(is_callable($this->config->getOnExceptionHandler())){
-            call_user_func($this->config->getOnExceptionHandler(),$server,$throwable,$raw,$client,$response);
+        if (!$server instanceof WebSocketServer) {
+            throw new \LogicException('webSocket client requires a WebSocket server');
+        }
+
+        return $server;
+    }
+
+    private function hookException(
+        Server $server,
+        \Throwable $throwable,
+        string $raw,
+        Tcp|Udp $client,
+        Response $response
+    ): void
+    {
+        $exceptionHandler = $this->config->getOnExceptionHandler();
+        if($exceptionHandler !== null){
+            $exceptionHandler($server,$throwable,$raw,$client,$response);
         }else{
             $this->close($server, $client, $response);
             throw $throwable;

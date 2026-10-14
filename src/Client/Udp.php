@@ -11,61 +11,43 @@ namespace EasySwoole\Socket\Client;
 
 class Udp
 {
-    private $server_socket = -1;
-    private $address;
-    private $port;
+    private int $server_socket = -1;
+    private string $address;
+    private int $port;
 
-    function __construct($serSock,$address,$port)
+    public function __construct(int $serSock, string $address, int $port)
     {
         $this->server_socket = $serSock;
         $this->address = $address;
         $this->port = $port;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getServerSocket()
+    public function getServerSocket(): int
     {
         return $this->server_socket;
     }
 
-    /**
-     * @param mixed $server_socket
-     */
-    public function setServerSocket($server_socket)
+    public function setServerSocket(int $server_socket): void
     {
         $this->server_socket = $server_socket;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getAddress()
+    public function getAddress(): string
     {
         return $this->address;
     }
 
-    /**
-     * @param mixed $address
-     */
-    public function setAddress($address)
+    public function setAddress(string $address): void
     {
         $this->address = $address;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getPort()
+    public function getPort(): int
     {
         return $this->port;
     }
 
-    /**
-     * @param mixed $port
-     */
-    public function setPort($port)
+    public function setPort(int $port): void
     {
         $this->port = $port;
     }

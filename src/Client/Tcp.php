@@ -11,43 +11,31 @@ namespace EasySwoole\Socket\Client;
 
 class Tcp
 {
-    protected $reactorId;
-    protected $fd;
+    protected ?int $reactorId;
+    protected ?int $fd;
 
-    function __construct($fd = null,$reactorId = null)
+    public function __construct(?int $fd = null, ?int $reactorId = null)
     {
         $this->fd = $fd;
         $this->reactorId = $reactorId;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getReactorId()
+    public function getReactorId(): ?int
     {
         return $this->reactorId;
     }
 
-    /**
-     * @param mixed $reactorId
-     */
-    public function setReactorId($reactorId)
+    public function setReactorId(?int $reactorId): void
     {
         $this->reactorId = $reactorId;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getFd()
+    public function getFd(): ?int
     {
         return $this->fd;
     }
 
-    /**
-     * @param mixed $fd
-     */
-    public function setFd($fd)
+    public function setFd(?int $fd): void
     {
         $this->fd = $fd;
     }

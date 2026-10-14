@@ -13,64 +13,47 @@ use Swoole\Websocket\Frame;
 
 class WebSocket extends Tcp
 {
-    private $data;
-    private $opCode;
-    private $isFinish;
+    private ?string $data = null;
+    private ?int $opCode = null;
+    private ?bool $isFinish = null;
 
-    function __construct(Frame $frame = null)
+    public function __construct(?Frame $frame = null)
     {
+        parent::__construct($frame?->fd);
+
         if($frame){
-            parent::__construct($frame->fd);
             $this->data = $frame->data;
             $this->opCode = $frame->opcode;
             $this->isFinish = $frame->finish;
         }
     }
 
-    /**
-     * @return mixed
-     */
-    public function getData()
+    public function getData(): ?string
     {
         return $this->data;
     }
 
-    /**
-     * @param mixed $data
-     */
-    public function setData($data)
+    public function setData(?string $data): void
     {
         $this->data = $data;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getOpCode()
+    public function getOpCode(): ?int
     {
         return $this->opCode;
     }
 
-    /**
-     * @param mixed $opCode
-     */
-    public function setOpCode($opCode)
+    public function setOpCode(?int $opCode): void
     {
         $this->opCode = $opCode;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getIsFinish()
+    public function getIsFinish(): ?bool
     {
         return $this->isFinish;
     }
 
-    /**
-     * @param mixed $isFinish
-     */
-    public function setIsFinish($isFinish)
+    public function setIsFinish(?bool $isFinish): void
     {
         $this->isFinish = $isFinish;
     }

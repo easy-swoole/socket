@@ -8,25 +8,21 @@
 
 namespace EasySwoole\Socket\Bean;
 
+use EasySwoole\Socket\Client\Tcp;
+use EasySwoole\Socket\Client\Udp;
 
 class Caller
 {
-    private $args = [];
-    private $controllerClass = null;
-    private $action = null;
-    private $client;
+    private array $args = [];
+    private ?string $controllerClass = null;
+    private ?string $action = null;
+    private Tcp|Udp $client;
 
-    /**
-     * @return array
-     */
     public function getArgs(): array
     {
         return $this->args;
     }
 
-    /**
-     * @param array $args
-     */
     public function setArgs(array $args): void
     {
         $this->args = $args;
@@ -53,18 +49,12 @@ class Caller
         $this->action = $action;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getClient()
+    public function getClient(): Tcp|Udp
     {
         return $this->client;
     }
 
-    /**
-     * @param mixed $client
-     */
-    public function setClient($client): void
+    public function setClient(Tcp|Udp $client): void
     {
         $this->client = $client;
     }

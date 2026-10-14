@@ -11,10 +11,12 @@ namespace EasySwoole\Socket\AbstractInterface;
 
 use EasySwoole\Socket\Bean\Caller;
 use EasySwoole\Socket\Bean\Response;
+use EasySwoole\Socket\Client\Tcp;
+use EasySwoole\Socket\Client\Udp;
 
 interface ParserInterface
 {
-    public function decode($raw,$client):?Caller;
+    public function decode(string $raw, Tcp|Udp $client): ?Caller;
 
-    public function encode(Response $response,$client):?string ;
+    public function encode(Response $response, Tcp|Udp $client): ?string;
 }

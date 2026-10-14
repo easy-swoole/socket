@@ -15,16 +15,17 @@ use EasySwoole\Socket\Client\Tcp;
 use EasySwoole\Socket\Client\Udp;
 use EasySwoole\Socket\Client\WebSocket;
 use Swoole\Server;
+use Swoole\WebSocket\Server as WebSocketServer;
 
 abstract class Controller
 {
-    private $response;
-    private $caller;
-    private $server;
+    private Response $response;
+    private Caller $caller;
+    private Server $server;
 
-    private $allowMethods = [];
+    private array $allowMethods = [];
 
-    function __construct()
+    public function __construct()
     {
         //支持在子类控制器中以private，protected来修饰某个方法不可见
         $list = [];
@@ -45,12 +46,12 @@ abstract class Controller
         );
     }
 
-    protected function actionNotFound(?string $actionName)
+    protected function actionNotFound(?string $actionName): void
     {
 
     }
 
-    protected function afterAction(?string $actionName)
+    protected function afterAction(?string $actionName): void
     {
 
     }
@@ -68,21 +69,29 @@ abstract class Controller
         return true;
     }
 
+    /** @return list<string> */
+    abstract protected function actionAllowList(): array;
+
     protected function response():Response
     {
         return $this->response;
     }
 
-    protected function responseImmediately(string $string)
+    protected function responseImmediately(string $string): bool
     {
         $client = $this->caller->getClient();
         if($client instanceof WebSocket){
-            $this->server->push($client->getFd(),$string);
+            return $this->webSocketServer()->push($client->getFd(), $string);
         }else if($client instanceof Tcp){
-            $this->server->send($client->getFd(),$string);
-        }else if($client instanceof Udp){
-            $this->server->sendto($client->getAddress(),$client->getPort(),$string,$client->getServerSocket());
+            return $this->server->send($client->getFd(), $string);
         }
+
+        return $this->server->sendto(
+            $client->getAddress(),
+            $client->getPort(),
+            $string,
+            $client->getServerSocket()
+        );
     }
 
     protected function caller():Caller
@@ -90,15 +99,21 @@ abstract class Controller
         return $this->caller;
     }
 
-    public function __hook(Server $server,Caller $request, Response $response)
+    public function __hook(Server $server, Caller $request, Response $response): void
     {
+        if ($request->getClient() instanceof WebSocket && !$server instanceof WebSocketServer) {
+            throw new \InvalidArgumentException('webSocket client requires a WebSocket server');
+        }
+
         $this->caller = $request;
         $this->response = $response;
         $this->server = $server;
         $actionName = $request->getAction();
+        $actionThrowable = null;
         try{
+            $allowMethods = array_intersect($this->allowMethods, $this->actionAllowList());
             if($this->onRequest($actionName) !== false){
-                if(in_array($actionName,$this->allowMethods)){
+                if(in_array($actionName,$allowMethods, true)){
                     $this->$actionName();
                 }else{
                     $this->actionNotFound($actionName);
@@ -106,13 +121,32 @@ abstract class Controller
             }
         }catch (\Throwable $throwable){
             //若没有重构onException，直接抛出给上层
-            $this->onException($throwable);
+            try {
+                $this->onException($throwable);
+            } catch (\Throwable $handledThrowable) {
+                $actionThrowable = $handledThrowable;
+            }
         }finally{
             try{
                 $this->afterAction($actionName);
             }catch (\Throwable $throwable){
-                $this->onException($throwable);
+                if ($actionThrowable === null) {
+                    $this->onException($throwable);
+                }
             }
         }
+
+        if ($actionThrowable !== null) {
+            throw $actionThrowable;
+        }
+    }
+
+    private function webSocketServer(): WebSocketServer
+    {
+        if (!$this->server instanceof WebSocketServer) {
+            throw new \LogicException('webSocket client requires a WebSocket server');
+        }
+
+        return $this->server;
     }
 }

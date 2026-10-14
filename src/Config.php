@@ -10,76 +10,48 @@ namespace EasySwoole\Socket;
 
 
 use EasySwoole\Socket\AbstractInterface\ParserInterface;
-use EasySwoole\Socket\Exception\Exception;
+use EasySwoole\Socket\Enum\SocketType;
 
 class Config
 {
-    const UDP = 'UDP';
-    const TCP = 'TCP';
-    const WEB_SOCKET = 'WEB_SOCKET';
+    protected SocketType $type;
+    /** @var callable|null */
+    protected mixed $onExceptionHandler = null;
+    protected ParserInterface $parser;
 
-    protected $type;
-    protected $onExceptionHandler = null;
-    protected $parser;
+    public function __construct(SocketType $type, ParserInterface $parser)
+    {
+        $this->type = $type;
+        $this->setParser($parser);
+    }
 
-    /**
-     * @return mixed
-     */
-    public function getType()
+    public function getType(): SocketType
     {
         return $this->type;
     }
 
-    /**
-     * @param mixed $type
-     */
-    public function setType($type): void
+    public function setType(SocketType $type): void
     {
         $this->type = $type;
     }
 
-    /**
-     * @return null
-     */
-    public function getOnExceptionHandler()
+    public function getOnExceptionHandler(): ?callable
     {
         return $this->onExceptionHandler;
     }
 
-    /**
-     * @param null $onExceptionHandler
-     */
-    public function setOnExceptionHandler($onExceptionHandler): void
+    public function setOnExceptionHandler(?callable $onExceptionHandler): void
     {
         $this->onExceptionHandler = $onExceptionHandler;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getParser():?ParserInterface
+    public function getParser(): ParserInterface
     {
-        if(is_string($this->parser)){
-            $class = $this->parser;
-            $this->parser = new $class();
-        }
         return $this->parser;
     }
 
-    public function setParser($parser): void
+    public function setParser(ParserInterface $parser): void
     {
-        if(is_string($parser)){
-            try{
-                $ref = new \ReflectionClass($parser);
-                if(!$ref->implementsInterface(ParserInterface::class)){
-                    throw new Exception("parser not a instance of ParserInterface");
-                }
-            }catch (\Throwable $throwable){
-                throw new Exception($throwable->getMessage());
-            }
-        }else if(!$parser instanceof ParserInterface){
-            throw new Exception("parser not a instance of ParserInterface");
-        }
         $this->parser = $parser;
     }
 }

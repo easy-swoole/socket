@@ -9,145 +9,124 @@
 namespace EasySwoole\Socket\Bean;
 
 
+use EasySwoole\Socket\Enum\ResponseStatus;
 use EasySwoole\Spl\SplBean;
+use InvalidArgumentException;
 
 class Response extends SplBean
 {
-    const STATUS_RESPONSE_AND_CLOSE = 'RESPONSE_AND_CLOSE';//响应后关闭
-    const STATUS_CLOSE = 'CLOSE';//不响应，直接关闭连接
-    const STATUS_OK = 'OK';
+    private const WEBSOCKET_OP_CODES = [
+        WEBSOCKET_OPCODE_CONTINUATION,
+        WEBSOCKET_OPCODE_TEXT,
+        WEBSOCKET_OPCODE_BINARY,
+        WEBSOCKET_OPCODE_CLOSE,
+        WEBSOCKET_OPCODE_PING,
+        WEBSOCKET_OPCODE_PONG,
+    ];
 
-    protected $status = self::STATUS_OK;
-    protected $message = null;
+    private const WEBSOCKET_FLAGS_MASK = SWOOLE_WEBSOCKET_FLAG_FIN
+        | SWOOLE_WEBSOCKET_FLAG_COMPRESS
+        | SWOOLE_WEBSOCKET_FLAG_RSV1
+        | SWOOLE_WEBSOCKET_FLAG_RSV2
+        | SWOOLE_WEBSOCKET_FLAG_RSV3
+        | SWOOLE_WEBSOCKET_FLAG_MASK;
+
+    private const INVALID_WEBSOCKET_CLOSE_CODES = [1004, 1005, 1006, 1015];
+
+    protected ResponseStatus $status = ResponseStatus::OK;
+    protected mixed $message = null;
     /*
      * 以下参数仅仅ws推送可用
      */
-    protected $opCode = WEBSOCKET_OPCODE_TEXT;
-    protected $finish = true;
+    protected int $opCode = WEBSOCKET_OPCODE_TEXT;
+    protected int $flags = SWOOLE_WEBSOCKET_FLAG_FIN;
 
-    /**
-     * tcp client 单独参数
-     */
-    /**
-     * @var bool $reset
-     */
-    protected $reset = false;
+    /** tcp client 单独参数 */
+    protected bool $reset = false;
 
     /**
      * ws client 单独参数
      */
-    /** @var int $code */
-    protected $code = SWOOLE_WEBSOCKET_CLOSE_NORMAL;
-    /** @var string|null $reason */
-    protected $reason = null;
+    protected int $code = SWOOLE_WEBSOCKET_CLOSE_NORMAL;
+    protected string $reason = '';
 
-    /**
-     * @return string
-     */
-    public function getStatus(): string
+    public function getStatus(): ResponseStatus
     {
         return $this->status;
     }
 
-    /**
-     * @param string $status
-     */
-    public function setStatus(string $status): void
+    public function setStatus(ResponseStatus $status): void
     {
         $this->status = $status;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getMessage()
+    public function getMessage(): mixed
     {
         return $this->message;
     }
 
-    /**
-     * @param mixed $message
-     */
-    public function setMessage($message): void
+    public function setMessage(mixed $message): void
     {
         $this->message = $message;
     }
 
-    /**
-     * @return int
-     */
     public function getOpCode(): int
     {
         return $this->opCode;
     }
 
-    /**
-     * @param int $opCode
-     */
     public function setOpCode(int $opCode): void
     {
+        if (!in_array($opCode, self::WEBSOCKET_OP_CODES, true)) {
+            throw new InvalidArgumentException("invalid WebSocket opcode: {$opCode}");
+        }
+
         $this->opCode = $opCode;
     }
 
-    /**
-     * @return bool
-     */
-    public function isFinish(): bool
+    public function getFlags(): int
     {
-        return $this->finish;
+        return $this->flags;
     }
 
-    /**
-     * @param bool $finish
-     */
-    public function setFinish(bool $finish): void
+    public function setFlags(int $flags): void
     {
-        $this->finish = $finish;
+        if ($flags < 0 || ($flags & ~self::WEBSOCKET_FLAGS_MASK) !== 0) {
+            throw new InvalidArgumentException("invalid WebSocket flags: {$flags}");
+        }
+
+        $this->flags = $flags;
     }
 
-    /**
-     * @return bool
-     */
     public function isReset(): bool
     {
         return $this->reset;
     }
 
-    /**
-     * @param bool $reset
-     */
     public function setReset(bool $reset): void
     {
         $this->reset = $reset;
     }
 
-    /**
-     * @return int
-     */
     public function getCode(): int
     {
         return $this->code;
     }
 
-    /**
-     * @param int $code
-     */
     public function setCode(int $code): void
     {
+        if ($code < 1000 || $code > 4999 || in_array($code, self::INVALID_WEBSOCKET_CLOSE_CODES, true)) {
+            throw new InvalidArgumentException("invalid WebSocket close code: {$code}");
+        }
+
         $this->code = $code;
     }
 
-    /**
-     * @return string|null
-     */
-    public function getReason(): ?string
+    public function getReason(): string
     {
         return $this->reason;
     }
 
-    /**
-     * @param string $reason
-     */
     public function setReason(string $reason): void
     {
         $this->reason = $reason;

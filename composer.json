@@ -13,6 +13,7 @@
     ],
     "require": {
         "php": ">=8.1.0",
+        "ext-swoole": "*",
         "easyswoole/spl": "^2.0"
     },
     "autoload": {
@@ -20,7 +21,11 @@
             "EasySwoole\\Socket\\": "src/"
         }
     },
+    "scripts": {
+        "test": "phpunit --configuration phpunit.xml"
+    },
     "require-dev": {
-        "easyswoole/swoole-ide-helper": "^1.0"
+        "easyswoole/swoole-ide-helper": "^1.0",
+        "phpunit/phpunit": "^10.5"
     }
 }
